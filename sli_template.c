@@ -1,0 +1,121 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+
+typedef struct Node {
+    int val;
+    int height;
+    struct Node** next;
+} Node;
+
+typedef struct SkipList {
+    int max_height;
+    Node* start;
+    Node* end;
+} SkipList;
+
+int getHeight(int max_h) {
+    int h = 1;
+    float p = 0.8;
+    while (h < max_h && rand() / (RAND_MAX + 1.) < p) h++;
+    return h;
+}
+
+Node* newNode(int val, int max_height) {
+    Node* n = (Node*) malloc(sizeof(Node)); // allocate
+    n->val = val;
+    n->height = getHeight(max_height);
+    n->next = calloc(n->height, sizeof(Node*)); // allocate, set all pointers to NULL
+    return n;
+}
+
+void deleteNode(Node* n) {
+    // remove Node from memory
+    free(n);
+}
+
+SkipList* newSkipList(int max_height) {
+    SkipList* list = malloc(sizeof(SkipList));// allocate
+    list->max_height = max_height;
+    
+    list->start=malloc(sizeof(Node));
+    list->end=malloc(sizeof(Node));// allocate list->start and list->end
+    list->start->height=list->end->height=max_height;
+    // initialize height and next for each one
+    list->start->next=malloc(max_height* sizeof(Node*));
+    list->end->next=calloc(max_height, sizeof(Node*));
+    
+    for(int i=0; i<max_height; i++) {
+        list->start->next[i] = list->end;
+        list->end->next[i] = NULL;
+    }
+
+    return list;
+}
+
+void deleteSkipList(SkipList* list) {
+    Node* tmp=list->start;
+    while(tmp!=NULL){
+        Node* to_free=tmp;
+        tmp=tmp->next[0];
+        deleteNode(to_free);
+    }
+    free(list);
+    // call deleteNode() on every node in skiplist
+    // call free() on list
+}
+
+void insert(SkipList* list, Node* node) {
+    Node* tmp = list->start;
+    int i = list->max_height - 1;
+    while (i >= 0) {
+        while(tmp->next[i]->next[i]!=NULL && tmp->next[i]->val < node->val) tmp=tmp->next[i];
+        if(i<node->height){
+             node->next[i]=tmp->next[i];
+             tmp->next[i]=node;
+        }
+        // while value of tmp->next[i] is less than value of given node, go ahead
+        // if i isn't too high - insert (plug) given node on level 'i'
+        i--;
+    }
+}
+
+int main(int argc, char** argv) {
+    /*
+     * test data:
+     * Z - number of test cases
+     * h, I - max height of single node (h), number of values to insert (I)
+     * I values to insert
+     * Output:
+     * I lines, subsequent values stored in list
+    */
+    srand(time(NULL));
+    int Z;
+    scanf("%d", &Z);
+
+    for (int i=0; i<Z; i++) {
+        int h, I, R, F;
+        scanf("%d", &h);
+        scanf("%d", &I);
+        //scanf("%d", &R);
+        //scanf("%d", &F);
+
+        SkipList* list = newSkipList(h);
+        int x;
+        // insert
+        for(int j=0; j<I; j++) {
+            scanf("%d", &x);
+            insert(list, newNode(x, h));
+        }
+        // print all values
+        Node* iter = list->start, tmp;
+        while(iter->next[0]->next[0]!=NULL) {
+            printf("%d\n", iter->next[0]->val);
+            iter = iter->next[0];
+        }
+        
+        // cleanup
+        deleteSkipList(list);
+    }
+}
